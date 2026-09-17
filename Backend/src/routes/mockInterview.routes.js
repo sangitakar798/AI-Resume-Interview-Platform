@@ -1,0 +1,10 @@
+const express = require('express');
+const auth = require('../middlewares/auth.middleware');
+const controller = require('../controllers/mockInterview.controller');
+const router = express.Router();
+router.use(auth.authUser);
+router.post('/start', controller.startMockInterview);
+router.get('/:id', controller.getMockInterview);
+router.post('/:id/answer', controller.submitMockAnswer);
+router.post('/:id/complete', controller.completeMockInterview);
+module.exports = router;

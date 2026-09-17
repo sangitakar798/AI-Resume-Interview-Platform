@@ -1,0 +1,19 @@
+import {createBrowserRouter} from "react-router"
+import Login from "./features/auth/pages/Login"
+import Register from "./features/auth/pages/Register"
+import Protected from "./features/auth/components/Protected"
+import Home from "./features/interview/pages/Home"
+import Interview from "./features/interview/pages/Interview"
+import ResumeEditor from "./features/resume/pages/ResumeEditor"
+import MockInterview from "./features/mockInterview/pages/MockInterview"
+import ApplicationTracker from "./features/tracker/pages/ApplicationTracker"
+
+export const router = createBrowserRouter([
+  { path: "/login", element: <Login /> },
+  { path: "/register", element: <Register /> },
+  { path: "/", element: <Protected><Home /></Protected> },
+  { path: "/interview/:interviewId", element: <Protected><Interview /></Protected> },
+  { path: "/resume-editor/:interviewId", element: <Protected><ResumeEditor /></Protected> },
+  { path: "/mock-interview/:interviewId", element: <Protected><MockInterview /></Protected> },
+  { path: "/applications", element: <Protected><ApplicationTracker /></Protected> },
+]);

@@ -1,0 +1,8 @@
+.resume-document a {
+  color: #075985;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.resume-document a:hover { color: #be185d; }
+.editor-actions button:disabled { cursor: wait; opacity: .7; }

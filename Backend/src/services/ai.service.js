@@ -3,9 +3,12 @@ const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema")
 const puppeteer = require("puppeteer")
 const ai = new GoogleGenAI({
-    apiKey: process.env.GOOGLE_GENAI_API_KEY
+    apiKey: process.env.GEMINI_API_KEY
 });
-
+console.log(
+    "Gemini API key exists:",
+    !!process.env.GEMINI_API_KEY
+);
 // Zod Schema Definition
 const interviewReportSchema = z.object({
     matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job description"),

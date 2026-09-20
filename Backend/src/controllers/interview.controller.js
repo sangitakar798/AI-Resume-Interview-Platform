@@ -10,48 +10,140 @@ const interviewReportModel = require("../models/interviewReport.model")
 /**
  * @description Controller to generate interview report based on user self description, resume and job description.
  */
+// async function generateInterViewReportController(req, res) {
+//     const { selfDescription, jobDescription } = req.body
+//     const trimmedJobDescription = jobDescription?.trim()
+//     const trimmedSelfDescription = selfDescription?.trim()
+
+//     if (!trimmedJobDescription) {
+//         return res.status(400).json({
+//             message: "A job description is required."
+//         })
+//     }
+
+//     if (!req.file && !trimmedSelfDescription) {
+//         return res.status(400).json({
+//             message: "Upload a resume or provide a self-description."
+//         })
+//     }
+
+//     const resumeContent = req.file
+//     ? await new pdfParse.PDFParse(Uint8Array.from(req.file.buffer)).getText()
+//     : { text: "" }
+
+//     const interViewReportByAi = await generateInterviewReport({
+//         resume: resumeContent.text,
+//         selfDescription: trimmedSelfDescription || "",
+//         jobDescription: trimmedJobDescription
+//     })
+
+//     const interviewReport = await interviewReportModel.create({
+//         user: req.user.id,
+//         resume: resumeContent.text,
+//         selfDescription: trimmedSelfDescription || "",
+//         jobDescription: trimmedJobDescription,
+//         ...interViewReportByAi
+//     })
+
+//     res.status(201).json({
+//         message: "Interview report generated successfully.",
+//         interviewReport
+//     })
+
+// }
 async function generateInterViewReportController(req, res) {
-    const { selfDescription, jobDescription } = req.body
-    const trimmedJobDescription = jobDescription?.trim()
-    const trimmedSelfDescription = selfDescription?.trim()
+    try {
+        console.log("=================================");
+        console.log("Generate Interview Report API");
+        console.log("User:", req.user?.id);
+        console.log("File:", req.file?.originalname || "No resume");
+        console.log("=================================");
 
-    if (!trimmedJobDescription) {
-        return res.status(400).json({
-            message: "A job description is required."
-        })
+        const { selfDescription, jobDescription } = req.body;
+
+        const trimmedJobDescription = jobDescription?.trim();
+        const trimmedSelfDescription = selfDescription?.trim();
+
+        // Job description is required
+        if (!trimmedJobDescription) {
+            return res.status(400).json({
+                message: "A job description is required."
+            });
+        }
+
+        // Resume OR self description is required
+        if (!req.file && !trimmedSelfDescription) {
+            return res.status(400).json({
+                message: "Upload a resume or provide a self-description."
+            });
+        }
+
+        let resumeText = "";
+
+        // Extract text from uploaded PDF
+        if (req.file) {
+            console.log("Reading resume PDF...");
+
+            const pdf = new pdfParse.PDFParse(
+                Uint8Array.from(req.file.buffer)
+            );
+
+            const resumeContent = await pdf.getText();
+
+            resumeText = resumeContent.text || "";
+
+            console.log(
+                "Resume text length:",
+                resumeText.length
+            );
+        }
+
+        console.log("Calling Gemini AI...");
+
+        const interViewReportByAi =
+            await generateInterviewReport({
+                resume: resumeText,
+                selfDescription: trimmedSelfDescription || "",
+                jobDescription: trimmedJobDescription
+            });
+
+        console.log("Gemini response received.");
+
+        // Save report to MongoDB
+        const interviewReport =
+            await interviewReportModel.create({
+                user: req.user.id,
+                resume: resumeText,
+                selfDescription: trimmedSelfDescription || "",
+                jobDescription: trimmedJobDescription,
+                ...interViewReportByAi
+            });
+
+        console.log(
+            "Interview report saved:",
+            interviewReport._id
+        );
+
+        return res.status(201).json({
+            message: "Interview report generated successfully.",
+            interviewReport
+        });
+
+    } catch (error) {
+
+        console.error("=================================");
+        console.error("GENERATE INTERVIEW REPORT ERROR");
+        console.error("=================================");
+        console.error(error);
+        console.error("Message:", error.message);
+        console.error("Stack:", error.stack);
+
+        return res.status(500).json({
+            message: "Failed to generate interview report.",
+            error: error.message
+        });
     }
-
-    if (!req.file && !trimmedSelfDescription) {
-        return res.status(400).json({
-            message: "Upload a resume or provide a self-description."
-        })
-    }
-
-    const resumeContent = req.file
-    ? await new pdfParse.PDFParse(Uint8Array.from(req.file.buffer)).getText()
-    : { text: "" }
-
-    const interViewReportByAi = await generateInterviewReport({
-        resume: resumeContent.text,
-        selfDescription: trimmedSelfDescription || "",
-        jobDescription: trimmedJobDescription
-    })
-
-    const interviewReport = await interviewReportModel.create({
-        user: req.user.id,
-        resume: resumeContent.text,
-        selfDescription: trimmedSelfDescription || "",
-        jobDescription: trimmedJobDescription,
-        ...interViewReportByAi
-    })
-
-    res.status(201).json({
-        message: "Interview report generated successfully.",
-        interviewReport
-    })
-
 }
-
 /**
  * @description Controller to get interview report by interviewId.
  */

@@ -1,7 +1,16 @@
 const userModel = require("../models/user.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const tokenBlacklistModel = require("../models/backlist.model")
+const tokenBlacklistModel = require("../models/backlist.model");
+
+// Cookie configuration for Vercel frontend + Render backend
+const cookieOptions = {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
+};
+
 /*
  * Register User
  */
@@ -11,6 +20,7 @@ async function registerUserController(req, res) {
         console.log("Request body:", req.body);
 
         const { username, email, password } = req.body;
+
         const normalizedUsername = username?.trim();
         const normalizedEmail = email?.trim().toLowerCase();
 
@@ -31,7 +41,8 @@ async function registerUserController(req, res) {
 
         if (isUserAlreadyExist) {
             return res.status(400).json({
-                message: "Account already exists with this email address or username"
+                message:
+                    "Account already exists with this email address or username"
             });
         }
 
@@ -49,6 +60,7 @@ async function registerUserController(req, res) {
 
         console.log("User created:", user._id);
 
+        // Create JWT
         const token = jwt.sign(
             {
                 id: user._id,
@@ -60,10 +72,8 @@ async function registerUserController(req, res) {
             }
         );
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            sameSite: "lax"
-        });
+        // Store JWT in HTTP-only cookie
+        res.cookie("token", token, cookieOptions);
 
         return res.status(201).json({
             message: "User registered successfully",
@@ -91,6 +101,7 @@ async function registerUserController(req, res) {
 async function loginUserController(req, res) {
     try {
         const { email, password } = req.body;
+
         const normalizedEmail = email?.trim().toLowerCase();
 
         if (!normalizedEmail || !password) {
@@ -99,7 +110,10 @@ async function loginUserController(req, res) {
             });
         }
 
-        const user = await userModel.findOne({ email: normalizedEmail });
+        // Find user
+        const user = await userModel.findOne({
+            email: normalizedEmail
+        });
 
         if (!user) {
             return res.status(400).json({
@@ -107,7 +121,7 @@ async function loginUserController(req, res) {
             });
         }
 
-        // IMPORTANT: await
+        // Check password
         const isPasswordValid = await bcrypt.compare(
             password,
             user.password
@@ -119,6 +133,7 @@ async function loginUserController(req, res) {
             });
         }
 
+        // Create JWT
         const token = jwt.sign(
             {
                 id: user._id,
@@ -130,10 +145,9 @@ async function loginUserController(req, res) {
             }
         );
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            sameSite: "lax"
-        });
+        // IMPORTANT:
+        // Use the same cookie configuration as Register
+        res.cookie("token", token, cookieOptions);
 
         return res.status(200).json({
             message: "User login successfully",
@@ -153,51 +167,75 @@ async function loginUserController(req, res) {
         });
     }
 }
-async function logoutUserController(req,res){
-    const token = req.cookies.token
-
-    if(token){
-        await tokenBlacklistModel.create({token})
-    }
-    res.clearCookie("token")
-    res.status(200).json({
-        message:"User logged out successfully"
-    })
-}
 
 
+/*
+ * Logout User
+ */
+async function logoutUserController(req, res) {
+    try {
+        const token = req.cookies.token;
 
-async function getMeController(req,res) {
-    const user = await userModel.findById(req.user.id)
-    res.status(200).json({
-        message:"User details fetched successfully",
-        user:{
-            id : user._id,
-            username: user.username,
-            email: user.email
+        // Add token to blacklist
+        if (token) {
+            await tokenBlacklistModel.create({
+                token
+            });
         }
-    })
+
+        // Remove cookie
+        res.clearCookie("token", {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none"
+        });
+
+        return res.status(200).json({
+            message: "User logged out successfully"
+        });
+
+    } catch (error) {
+        console.error("Logout error:", error);
+
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
 }
 
 
+/*
+ * Get Current User
+ */
+async function getMeController(req, res) {
+    try {
+        const user = await userModel.findById(req.user.id);
 
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
 
+        return res.status(200).json({
+            message: "User details fetched successfully",
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email
+            }
+        });
 
+    } catch (error) {
+        console.error("Get user error:", error);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+}
 
 
 module.exports = {
@@ -206,5 +244,3 @@ module.exports = {
     logoutUserController,
     getMeController
 };
-
-

@@ -3,49 +3,53 @@ import axios from "axios";
 const api = axios.create({
     baseURL: "https://ai-resume-interview-platform-yfgl.onrender.com",
     withCredentials: true,
-})
+});
 
+// Intercept requests and attach the Bearer token if present
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem("token"); // or wherever you store your auth token
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
 
 /**
  * @description Service to generate interview report based on user self description, resume and job description.
  */
 export const generateInterviewReport = async ({ jobDescription, selfDescription, resumeFile }) => {
-
-    const formData = new FormData()
-    formData.append("jobDescription", jobDescription)
-    formData.append("selfDescription", selfDescription)
-    formData.append("resume", resumeFile)
+    const formData = new FormData();
+    formData.append("jobDescription", jobDescription);
+    formData.append("selfDescription", selfDescription);
+    formData.append("resume", resumeFile);
 
     const response = await api.post("/api/interview/", formData, {
         headers: {
             "Content-Type": "multipart/form-data"
         }
-    })
+    });
 
-    return response.data
-
-}
-
+    return response.data;
+};
 
 /**
  * @description Service to get interview report by interviewId.
  */
 export const getInterviewReportById = async (interviewId) => {
-    const response = await api.get(`/api/interview/report/${interviewId}`)
-
-    return response.data
-}
-
+    const response = await api.get(`/api/interview/report/${interviewId}`);
+    return response.data;
+};
 
 /**
  * @description Service to get all interview reports of logged in user.
  */
 export const getAllInterviewReports = async () => {
-    const response = await api.get("/api/interview/")
-
-    return response.data
-}
-
+    const response = await api.get("/api/interview/");
+    return response.data;
+};
 
 /**
  * @description Service to generate resume pdf based on user self description, resume content and job description.
@@ -53,7 +57,7 @@ export const getAllInterviewReports = async () => {
 export const generateResumePdf = async ({ interviewReportId }) => {
     const response = await api.post(`/api/interview/resume/pdf/${interviewReportId}`, null, {
         responseType: "blob"
-    })
+    });
 
-    return response.data
-}
+    return response.data;
+};

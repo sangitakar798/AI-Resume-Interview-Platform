@@ -1,24 +1,41 @@
 import axios from 'axios'
+
 const api = axios.create({
-    baseURL : "https://ai-resume-interview-platform-yfgl.onrender.com",
-    withCredentials:true
+    baseURL: "https://ai-resume-interview-platform-yfgl.onrender.com",
 })
 
-export async function register({username,email,password}) {
-    const response = await api.post('/api/auth/register',{username,email,password})
+// Attach Bearer token to headers before sending requests
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem("token")
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+    }
+    return config;
+}, (error) => Promise.reject(error))
+
+export async function register({ username, email, password }) {
+    const response = await api.post('/api/auth/register', { username, email, password })
+    if (response.data.token) {
+        localStorage.setItem("token", response.data.token)
+    }
     return response.data
 }
 
-export async function login({email,password}) {
-    const response = await api.post('/api/auth/login',{email,password})
+export async function login({ email, password }) {
+    const response = await api.post('/api/auth/login', { email, password })
+    if (response.data.token) {
+        localStorage.setItem("token", response.data.token)
+    }
     return response.data
 }
 
-export async function logout(){
+export async function logout() {
+    localStorage.removeItem("token")
     const response = await api.get('/api/auth/logout')
     return response.data
 }
-export async function getMe(){
+
+export async function getMe() {
     const response = await api.get('/api/auth/get-me')
     return response.data
 }
